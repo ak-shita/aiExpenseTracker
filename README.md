@@ -35,3 +35,14 @@ python -m venv venv
 # Activate venv (Windows: venv\Scripts\activate | Mac/Linux: source venv/bin/activate)
 pip install fastapi uvicorn pandas scikit-learn python-multipart
 uvicorn main:app --reload
+
+The backend API will be available at http://localhost:8000/docs
+
+### 2. Start the Next.js Frontend
+Open a new terminal, navigate to the frontend directory, install dependencies, and run the development server:
+```bash
+cd frontend
+npm install
+npm run dev
+
+The interactive dashboard will be available at http://localhost:3000
