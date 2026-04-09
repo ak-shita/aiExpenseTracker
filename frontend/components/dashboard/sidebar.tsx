@@ -47,16 +47,7 @@ export function DashboardSidebar() {
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border p-4">
-        <div className="rounded-lg bg-muted/50 p-4">
-          <p className="text-xs font-medium text-muted-foreground">
-            Pro Tip
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Upload your bank statements regularly to catch more expense leakages
-          </p>
-        </div>
-      </div>
+      
     </aside>
   );
 }

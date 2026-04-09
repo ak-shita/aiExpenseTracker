@@ -62,7 +62,7 @@ export function ActionPlanSection({ actionPlan }: ActionPlanSectionProps) {
                   </p>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-xs font-semibold text-success">
-                      Save ₹{plan.potential_savings.toFixed(0)}/yr
+                      Save ₹{plan.potential_savings.toFixed(0)}{plan.recommendation.toLowerCase().includes("duplicate") ? "" : "/yr"}
                     </span>
                   </div>
                 </div>
