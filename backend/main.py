@@ -44,25 +44,21 @@ def extract_merchant(description: str) -> str:
 
 @app.post("/api/analyze")
 async def analyze(file: UploadFile = File(...)):
-    # 1. Read the uploaded CSV safely
+   
     contents = await file.read()
     df = pd.read_csv(io.BytesIO(contents))
-    
-    # Standardize column names to lowercase to avoid key errors
+
     df.columns = df.columns.str.lower()
-    
-    # Ensure necessary columns exist (basic validation)
+
     if not set(['date', 'description', 'amount']).issubset(df.columns):
         return {"error": "CSV must contain 'date', 'description', and 'amount' columns."}
 
-    # 2. Data Formatting
-    df["date"] = pd.to_datetime(df["date"])
+    df["date"] = pd.to_datetime(df["date"], format='mixed', dayfirst=True)
     df["amount"] = df["amount"].astype(float)
     
     leakages = []
     leakage_records = []
 
-    # --- CURRENT vs PREVIOUS MONTH SPEND ---
     month_periods = df["date"].dt.to_period("M")
     unique_months = month_periods.dropna().unique()
     unique_months = sorted(unique_months) if len(unique_months) else []
@@ -88,15 +84,13 @@ async def analyze(file: UploadFile = File(...)):
     else:
         total_spent_change = ((current_month_total - previous_month_total) / previous_month_total) * 100.0
 
-    # --- ML MODEL 1: ISOLATION FOREST FOR ANOMALIES ---
-    # Detects unusual transaction amounts (hidden fees, price hikes)
+
     if len(df) > 1:
         model_if = IsolationForest(contamination=0.05, random_state=42)
         df['anomaly'] = model_if.fit_predict(df[['amount']])
     else:
         df['anomaly'] = 1
-    
-    # IsolationForest returns -1 for anomalies
+
     anomalies = df[df['anomaly'] == -1]
     
     for _, row in anomalies.iterrows():
@@ -105,7 +99,7 @@ async def analyze(file: UploadFile = File(...)):
             "date": row["date"],
             "description": row["description"],
             "amount": float(row["amount"]),
-            "confidence": 85, # Base confidence for anomaly
+            "confidence": 85, 
             "type": "Anomaly",
             "merchant": merchant,
         }
@@ -119,8 +113,7 @@ async def analyze(file: UploadFile = File(...)):
             "merchant": merchant,
         })
 
-    # --- RULE-BASED: DUPLICATE DETECTION ---
-    # Flag as duplicate only when same description + amount appears within 72 hours.
+
     duplicate_window = pd.Timedelta(hours=72)
     duplicate_indices = set()
 
@@ -167,8 +160,6 @@ async def analyze(file: UploadFile = File(...)):
                 "merchant": merchant,
             })
 
-    # --- SUBSCRIPTION DETECTION ---
-    # ONLY extract transactions where category == 'Subscriptions' (strict match).
     subscriptions = []
     subscription_merchants = set()
 
