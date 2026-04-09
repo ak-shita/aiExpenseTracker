@@ -184,7 +184,7 @@ export function UploadModal({
           <p className="mt-3 text-sm text-destructive">{error}</p>
         ) : null}
 
-        <DialogFooter className="mt-4 gap-2 sm:gap-0">
+        <DialogFooter className="mt-4 gap-2 sm:gap-2">
           <Button variant="outline" onClick={handleCancel}>
             Cancel
           </Button>

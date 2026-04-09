@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 interface KPICardsProps {
   totalSpent: number;
+  totalSpentChange: number;
   predictionNextMonth: number;
   leakagesCount: number;
   leakagesAmount: number;
@@ -64,27 +65,21 @@ function KPICard({ title, value, subValue, change, icon, variant = "default" }: 
         </div>
 
         <div className="mt-4 flex items-center gap-1">
-          {isPositive ? (
-            <ArrowUpRight className={cn(
-              "h-4 w-4",
-              isWarning ? "text-destructive" : "text-success"
-            )} />
-          ) : (
-            <ArrowDownRight className={cn(
-              "h-4 w-4",
-              isWarning ? "text-success" : "text-destructive"
-            )} />
-          )}
-          <span className={cn(
-            "text-sm font-medium",
-            isWarning 
-              ? (isPositive ? "text-destructive" : "text-success")
-              : (isPositive ? "text-success" : "text-destructive")
-          )}>
-            {Math.abs(change)}%
-          </span>
-          <span className="text-sm text-muted-foreground">vs last month</span>
-        </div>
+  {isPositive ? (
+    <ArrowUpRight className="h-4 w-4 text-destructive" />
+  ) : (
+    <ArrowDownRight className="h-4 w-4 text-success" />
+  )}
+  
+  <span className={cn(
+    "text-sm font-medium",
+    isPositive ? "text-destructive" : "text-success"
+  )}>
+    {Math.abs(change)}%
+  </span>
+  
+  <span className="text-sm text-muted-foreground">vs last month</span>
+</div>
       </CardContent>
     </Card>
   );
@@ -92,6 +87,7 @@ function KPICard({ title, value, subValue, change, icon, variant = "default" }: 
 
 export function KPICards({
   totalSpent,
+  totalSpentChange,
   predictionNextMonth,
   leakagesCount,
   leakagesAmount,
@@ -105,7 +101,7 @@ export function KPICards({
       <KPICard
         title="Total Spent"
         value={`₹${totalSpent.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
-        change={0}
+        change={totalSpentChange}
         icon={<Receipt className="h-5 w-5" />}
       />
       <KPICard

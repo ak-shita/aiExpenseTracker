@@ -1,22 +1,26 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload } from "lucide-react";
+import { useUser, UserButton } from "@clerk/nextjs";
 
 interface HeaderProps {
   onUploadClick: () => void;
 }
 
 export function DashboardHeader({ onUploadClick }: HeaderProps) {
+  // Pull the logged-in user's data from Clerk
+  const { user } = useUser();
+  const firstName = user?.firstName || "User";
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div>
         <h1 className="text-xl font-semibold text-foreground">
-          Welcome back, Akshita
+          Welcome back, {firstName}
         </h1>
         <p className="text-sm text-muted-foreground">
-          {"Here's what's happening with your expenses"}
+          Here's what's happening with your expenses
         </p>
       </div>
 
@@ -26,10 +30,8 @@ export function DashboardHeader({ onUploadClick }: HeaderProps) {
           Upload Statement
         </Button>
 
-        <Avatar className="h-9 w-9 border-2 border-primary/20">
-          <AvatarImage src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=64&h=64&fit=crop&crop=face" />
-          <AvatarFallback>AJ</AvatarFallback>
-        </Avatar>
+        {/* This replaces the fake Unsplash Avatar and gives you the real photo + logout menu */}
+        <UserButton  />
       </div>
     </header>
   );

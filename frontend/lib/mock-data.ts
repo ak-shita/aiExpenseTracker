@@ -78,6 +78,7 @@ export interface Leakage {
 
 export interface FinancialData {
   total_spent: number;
+  total_spent_change: number;
   prediction_next_month: number;
   leakages: Leakage[];
   subscriptions: SubscriptionApiItem[];
@@ -144,6 +145,7 @@ export const detectedLeakages: Leakage[] = [
 
 export const mockFinancialData: FinancialData = {
   total_spent: 18330.0,
+  total_spent_change: 0,
   prediction_next_month: 3210.45,
   leakages: detectedLeakages,
   subscriptions: [

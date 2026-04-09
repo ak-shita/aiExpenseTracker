@@ -62,6 +62,32 @@ async def analyze(file: UploadFile = File(...)):
     leakages = []
     leakage_records = []
 
+    # --- CURRENT vs PREVIOUS MONTH SPEND ---
+    month_periods = df["date"].dt.to_period("M")
+    unique_months = month_periods.dropna().unique()
+    unique_months = sorted(unique_months) if len(unique_months) else []
+
+    current_month = unique_months[-1] if unique_months else None
+    previous_month = unique_months[-2] if len(unique_months) >= 2 else None
+
+    current_month_total = (
+        float(df.loc[month_periods == current_month, "amount"].sum())
+        if current_month is not None
+        else 0.0
+    )
+    previous_month_total = (
+        float(df.loc[month_periods == previous_month, "amount"].sum())
+        if previous_month is not None
+        else 0.0
+    )
+
+    if previous_month is None:
+        total_spent_change = 0.0
+    elif previous_month_total == 0:
+        total_spent_change = 100.0 if current_month_total > 0 else 0.0
+    else:
+        total_spent_change = ((current_month_total - previous_month_total) / previous_month_total) * 100.0
+
     # --- ML MODEL 1: ISOLATION FOREST FOR ANOMALIES ---
     # Detects unusual transaction amounts (hidden fees, price hikes)
     if len(df) > 1:
@@ -94,12 +120,34 @@ async def analyze(file: UploadFile = File(...)):
         })
 
     # --- RULE-BASED: DUPLICATE DETECTION ---
-    # Keeps your duplicate logic to catch accidental double-charges
-    duplicates = df[df.duplicated(subset=["amount", "description"], keep=False)]
-    
+    # Flag as duplicate only when same description + amount appears within 72 hours.
+    duplicate_window = pd.Timedelta(hours=72)
+    duplicate_indices = set()
+
+    grouped = df.sort_values("date").groupby(["description", "amount"], dropna=False)
+    for _, group in grouped:
+        if len(group) < 2:
+            continue
+
+        group = group.sort_values("date")
+        dates = group["date"].tolist()
+        idxs = group.index.tolist()
+
+        for i in range(1, len(group)):
+            if dates[i] - dates[i - 1] <= duplicate_window:
+                duplicate_indices.add(idxs[i - 1])
+                duplicate_indices.add(idxs[i])
+
+    anomaly_keys = {
+        (l["description"], float(l["amount"]), l["date"])
+        for l in leakage_records
+        if l["type"] == "Anomaly"
+    }
+
+    duplicates = df.loc[sorted(duplicate_indices)] if duplicate_indices else pd.DataFrame(columns=df.columns)
     for _, row in duplicates.iterrows():
-        # Prevent adding the exact same transaction twice if it was also flagged as an anomaly
-        if row["description"] not in [l["description"] for l in leakages]:
+        duplicate_key = (row["description"], float(row["amount"]), row["date"])
+        if duplicate_key not in anomaly_keys:
             merchant = extract_merchant(row["description"])
             leakage_record = {
                 "date": row["date"],
@@ -120,24 +168,28 @@ async def analyze(file: UploadFile = File(...)):
             })
 
     # --- SUBSCRIPTION DETECTION ---
-    # Detect recurring merchants by repeated descriptions and estimate next billing date.
+    # ONLY extract transactions where category == 'Subscriptions' (strict match).
     subscriptions = []
-    recurring = df.groupby("description").agg(
-        count=("description", "count"),
-        amount=("amount", "mean"),
-        last_seen=("date", "max"),
-    ).reset_index()
-    recurring = recurring[recurring["count"] >= 2]
+    subscription_merchants = set()
 
-    for _, row in recurring.iterrows():
-        merchant = extract_merchant(row["description"])
-        next_billing = (row["last_seen"] + timedelta(days=30)).strftime("%Y-%m-%d")
-        subscriptions.append({
-            "merchant": merchant,
-            "amount": round(float(row["amount"]), 2),
-            "status": "Active",
-            "next_billing": next_billing,
-        })
+    if "category" in df.columns:
+        subs_df = df[df["category"].astype(str) == "Subscriptions"].copy()
+        if not subs_df.empty:
+            recurring = subs_df.groupby("description").agg(
+                amount=("amount", "mean"),
+                last_seen=("date", "max"),
+            ).reset_index()
+
+            for _, row in recurring.iterrows():
+                merchant = extract_merchant(row["description"])
+                subscription_merchants.add(merchant)
+                next_billing = (row["last_seen"] + timedelta(days=30)).strftime("%Y-%m-%d")
+                subscriptions.append({
+                    "merchant": merchant,
+                    "amount": round(float(row["amount"]), 2),
+                    "status": "Active",
+                    "next_billing": next_billing,
+                })
 
     # --- ML MODEL 2: LINEAR REGRESSION FOR FORECASTING ---
     # Predicts next month's total spend based on historical trend
@@ -196,27 +248,47 @@ async def analyze(file: UploadFile = File(...)):
 
     # --- ACTION PLAN ---
     action_plan = []
+    seen_duplicate_merchants = set()
+
     for leakage in leakage_records:
-        yearly_savings = round(float(leakage["amount"]) * 12, 2)
         merchant = leakage.get("merchant", "Unknown")
+        amount = round(float(leakage["amount"]), 2)
+
         if leakage["type"] == "Duplicate":
-            recommendation = f"Cancel duplicate {merchant} charge to save ${yearly_savings}/yr"
+            # One-time recovery, do NOT annualize, and only one card per merchant.
+            if merchant in seen_duplicate_merchants:
+                continue
+            seen_duplicate_merchants.add(merchant)
+
+            recommendation = f"Recover duplicate {merchant} charge to save ${amount}"
             priority = "High"
+            potential_savings = amount
         elif leakage["type"] == "Anomaly":
+            # Keep anomaly advice as preventative; this remains annualized.
+            yearly_savings = round(amount * 12, 2)
             recommendation = f"Review unusual {merchant} transaction to prevent about ${yearly_savings}/yr in recurring loss"
             priority = "Medium"
+            potential_savings = yearly_savings
         else:
+            yearly_savings = round(amount * 12, 2)
             recommendation = f"Investigate {merchant} charge pattern and reduce potential loss of ${yearly_savings}/yr"
             priority = "Low"
+            potential_savings = yearly_savings
+
+        # Only annualize (multiply by 12) when advice is about canceling an actual Subscription.
+        # (Duplicate is always one-time above.)
+        if "Cancel" in recommendation and merchant in subscription_merchants:
+            potential_savings = round(amount * 12, 2)
 
         action_plan.append({
             "recommendation": recommendation,
             "priority": priority,
-            "potential_savings": yearly_savings,
+            "potential_savings": potential_savings,
         })
 
     return {
-        "total_spent": float(df["amount"].sum()),
+        "total_spent": float(current_month_total),
+        "total_spent_change": float(round(total_spent_change, 2)),
         "prediction_next_month": float(prediction) if prediction > 0 else float(df["amount"].mean()),
         "leakages": leakages,
         "subscriptions": subscriptions,

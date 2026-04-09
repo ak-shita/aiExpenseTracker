@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useUser } from '@clerk/nextjs';
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { UploadModal } from "@/components/dashboard/upload-modal";
 import { KPICards } from "@/components/dashboard/kpi-cards";
-import { InsightsCards } from "@/components/dashboard/insights-cards";
 import { DashboardCharts } from "@/components/dashboard/charts";
 import { LeakagesTable } from "@/components/dashboard/leakages-table";
 import { SubscriptionsTable } from "@/components/dashboard/subscriptions-table";
@@ -21,19 +21,22 @@ import {
 } from "@/lib/mock-data";
 
 export default function DashboardPage() {
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
-  const [financialData, setFinancialData] =
-    useState<FinancialData>(mockFinancialData);
+  // Clerk hook to get the logged-in user's data on the client side
+  const { user } = useUser();
+  const firstName = user?.firstName || 'User';
 
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [financialData, setFinancialData] = useState<FinancialData>(mockFinancialData);
 
   const totalSpent = financialData.total_spent || 0;
+  const totalSpentChange = Number(financialData.total_spent_change || 0);
   const predictionNextMonth = Number((financialData.prediction_next_month || 0).toFixed(2));
   const leakagesCount = financialData.leakages?.length || 0;
   const leakagesAmount = financialData.leakages?.reduce((sum, l) => sum + l.amount, 0) || 0;
 
-
   const handleAnalyzeSuccess = (apiData: {
     total_spent: number;
+    total_spent_change?: number;
     prediction_next_month: number;
     leakages: Array<{
       id?: string;
@@ -72,6 +75,7 @@ export default function DashboardPage() {
 
     setFinancialData({
       total_spent: Number(apiData.total_spent) || 0,
+      total_spent_change: Number(apiData.total_spent_change) || 0,
       prediction_next_month: Number(apiData.prediction_next_month) || 0,
       leakages: normalizedLeakages,
       subscriptions: (apiData.subscriptions || []).map((sub) => ({
@@ -108,23 +112,12 @@ export default function DashboardPage() {
         
         <main className="p-6">
           <div className="mx-auto max-w-7xl space-y-6">
+
             {/* KPI Cards */}
             <section>
               <KPICards
                 totalSpent={totalSpent}
-                predictionNextMonth={predictionNextMonth}
-                leakagesCount={leakagesCount}
-                leakagesAmount={leakagesAmount}
-              />
-            </section>
-
-            {/* Insights */}
-            <section>
-              <h2 className="mb-4 text-lg font-semibold text-foreground">
-                Key Insights
-              </h2>
-              <InsightsCards
-                totalSpent={totalSpent}
+                totalSpentChange={totalSpentChange}
                 predictionNextMonth={predictionNextMonth}
                 leakagesCount={leakagesCount}
                 leakagesAmount={leakagesAmount}
