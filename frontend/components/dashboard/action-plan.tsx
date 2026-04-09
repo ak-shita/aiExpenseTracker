@@ -62,7 +62,8 @@ export function ActionPlanSection({ actionPlan }: ActionPlanSectionProps) {
                   </p>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-xs font-semibold text-success">
-                      Save ₹{plan.potential_savings.toFixed(0)}{plan.recommendation.toLowerCase().includes("duplicate") ? "" : "/yr"}
+                    Save ₹{plan.potential_savings}
+                    {plan.recommendation.toLowerCase().includes("duplicate") || plan.recommendation.toLowerCase().includes("unusual") ? "" : "/yr"}
                     </span>
                   </div>
                 </div>
@@ -79,7 +80,7 @@ export function ActionPlanSection({ actionPlan }: ActionPlanSectionProps) {
             ₹{actionPlan.reduce((sum, p) => sum + p.potential_savings, 0).toFixed(0)}
             <span className="text-base font-normal text-muted-foreground">
               {" "}
-              / year
+
             </span>
           </p>
         </div>

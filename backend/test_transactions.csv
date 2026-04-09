@@ -1,18 +1,31 @@
 date,description,amount,category
+2026-01-01,Spotify Premium,119.00,Subscriptions
+2026-01-05,Grocery Store,1850.00,Food & Dining
+2026-01-10,Gold Gym,1500.00,Subscriptions
+2026-01-12,Electric Bill,2100.00,Utilities
+2026-01-15,Coffee Shop,250.00,Food & Dining
+2026-01-20,Grocery Store,1400.00,Food & Dining
+2026-01-25,Uber,450.00,Transportation
+2026-01-28,Netflix,499.00,Subscriptions
 2026-02-01,Spotify Premium,119.00,Subscriptions
-2026-02-05,Grocery Store,1450.50,Food & Dining
-2026-02-12,Electric Bill,2100.00,Utilities
-2026-02-15,Coffee Shop,250.00,Food & Dining
+2026-02-05,Grocery Store,1900.00,Food & Dining
+2026-02-10,Gold Gym,1500.00,Subscriptions
+2026-02-12,Electric Bill,2050.00,Utilities
+2026-02-14,Swiggy Order,850.00,Food & Dining
+2026-02-15,Swiggy Order,850.00,Food & Dining
 2026-02-20,Amazon Shopping,3400.00,Shopping
 2026-02-28,Netflix,499.00,Subscriptions
 2026-03-01,Spotify Premium,119.00,Subscriptions
-2026-03-05,Grocery Store,1600.00,Food & Dining
-2026-03-12,Electric Bill,2300.00,Utilities
-2026-03-15,Coffee Shop,300.00,Food & Dining
-2026-03-20,Unknown Charge,5000.00,Other
-2026-03-22,Unknown Charge,5000.00,Other
+2026-03-05,Grocery Store,1750.00,Food & Dining
+2026-03-10,Gold Gym,1500.00,Subscriptions
+2026-03-12,Electric Bill,2400.00,Utilities
+2026-03-15,Coffee Shop,320.00,Food & Dining
+2026-03-18,Apple Store,125000.00,Shopping
+2026-03-22,Unknown Charge,8500.00,Other
 2026-03-28,Netflix,499.00,Subscriptions
 2026-04-01,Spotify Premium,119.00,Subscriptions
-2026-04-05,Grocery Store,1850.00,Food & Dining
-2026-04-10,Swiggy Order,450.00,Food & Dining
-2026-04-12,Electric Bill,2400.00,Utilities
+2026-04-05,Grocery Store,1800.00,Food & Dining
+2026-04-10,Gold Gym,1500.00,Subscriptions
+2026-04-12,Electric Bill,2200.00,Utilities
+2026-04-15,Uber,550.00,Transportation
+2026-04-18,Zomato,600.00,Food & Dining

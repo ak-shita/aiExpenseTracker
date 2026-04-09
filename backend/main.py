@@ -192,8 +192,24 @@ async def analyze(file: UploadFile = File(...)):
                 })
 
     # --- ML MODEL 2: LINEAR REGRESSION FOR FORECASTING ---
-    # Predicts next month's total spend based on historical trend
-    monthly = df.groupby(df["date"].dt.to_period("M"))["amount"].sum().reset_index()
+    # Predicts next month's total spend based on historical trend,
+    # trained only on baseline (non-anomalous, non-duplicate) spending.
+    clean_df = df.copy()
+    if leakage_records:
+        flagged_keys = {
+            (l["description"], float(l["amount"]), l["date"])
+            for l in leakage_records
+            if l["type"] in ("Anomaly", "Duplicate")
+        }
+        if flagged_keys:
+            clean_df = clean_df[
+                ~clean_df.apply(
+                    lambda r: (r["description"], float(r["amount"]), r["date"]) in flagged_keys,
+                    axis=1,
+                )
+            ]
+
+    monthly = clean_df.groupby(clean_df["date"].dt.to_period("M"))["amount"].sum().reset_index()
     monthly["month_index"] = np.arange(len(monthly))
     
     prediction = 0
@@ -264,21 +280,20 @@ async def analyze(file: UploadFile = File(...)):
             priority = "High"
             potential_savings = amount
         elif leakage["type"] == "Anomaly":
-            # Keep anomaly advice as preventative; this remains annualized.
-            yearly_savings = round(amount * 12, 2)
-            recommendation = f"Review unusual {merchant} transaction to prevent about ${yearly_savings}/yr in recurring loss"
+            # Anomalies are treated as one-time events; do NOT annualize.
+            recommendation = f"Review unusual {merchant} transaction to recover approximately ${amount}"
             priority = "Medium"
-            potential_savings = yearly_savings
+            potential_savings = amount
         else:
-            yearly_savings = round(amount * 12, 2)
-            recommendation = f"Investigate {merchant} charge pattern and reduce potential loss of ${yearly_savings}/yr"
+            # For other leakages, only annualize if this merchant is an actual Subscription.
+            if merchant in subscription_merchants:
+                yearly_savings = round(amount * 12, 2)
+                recommendation = f"Investigate recurring {merchant} charges to save around ${yearly_savings}/yr"
+                potential_savings = yearly_savings
+            else:
+                recommendation = f"Investigate {merchant} charge pattern and reduce potential loss of ${amount}"
+                potential_savings = amount
             priority = "Low"
-            potential_savings = yearly_savings
-
-        # Only annualize (multiply by 12) when advice is about canceling an actual Subscription.
-        # (Duplicate is always one-time above.)
-        if "Cancel" in recommendation and merchant in subscription_merchants:
-            potential_savings = round(amount * 12, 2)
 
         action_plan.append({
             "recommendation": recommendation,
